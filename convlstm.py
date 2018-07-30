@@ -11,13 +11,13 @@ class ConvLSTMCell(nn.Module):
         
         Parameters
         ----------
-        input_size: (int, int)
-            Height and width of input tensor as (height, width).
+        input_size: int
+            size of input tensor.
         input_dim: int
             Number of channels of input tensor.
         hidden_dim: int
             Number of channels of hidden state.
-        kernel_size: (int, int)
+        kernel_size: int
             Size of the convolutional kernel.
         bias: bool
             Whether or not to add the bias.
@@ -25,15 +25,15 @@ class ConvLSTMCell(nn.Module):
 
         super(ConvLSTMCell, self).__init__()
 
-        self.height, self.width = input_size
+        self.input_size = input_size
         self.input_dim  = input_dim
         self.hidden_dim = hidden_dim
 
         self.kernel_size = kernel_size
-        self.padding     = kernel_size[0] // 2, kernel_size[1] // 2
+        self.padding     = kernel_size // 2
         self.bias        = bias
-        
-        self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
+
+        self.conv = nn.Conv1d(in_channels=self.input_dim + self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
                               padding=self.padding,
@@ -58,8 +58,8 @@ class ConvLSTMCell(nn.Module):
         return h_next, c_next
 
     def init_hidden(self, batch_size):
-        return (Variable(torch.zeros(batch_size, self.hidden_dim, self.height, self.width)).cuda(),
-                Variable(torch.zeros(batch_size, self.hidden_dim, self.height, self.width)).cuda())
+        return (Variable(torch.zeros(batch_size, self.hidden_dim, self.input_size, self.width)).cuda(),
+                Variable(torch.zeros(batch_size, self.hidden_dim, self.input_size, self.width)).cuda())
 
 
 class ConvLSTM(nn.Module):
@@ -76,7 +76,7 @@ class ConvLSTM(nn.Module):
         if not len(kernel_size) == len(hidden_dim) == num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.height, self.width = input_size
+        self.input_size = input_size
 
         self.input_dim  = input_dim
         self.hidden_dim = hidden_dim
@@ -90,7 +90,7 @@ class ConvLSTM(nn.Module):
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.hidden_dim[i-1]
 
-            cell_list.append(ConvLSTMCell(input_size=(self.height, self.width),
+            cell_list.append(ConvLSTMCell(input_size=self.input_size,
                                           input_dim=cur_input_dim,
                                           hidden_dim=self.hidden_dim[i],
                                           kernel_size=self.kernel_size[i],
